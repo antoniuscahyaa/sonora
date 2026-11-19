@@ -26,6 +26,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cari folder proyek Gradle
+        id: proj
+        run: |
+          echo "Isi root repo:"
+          ls -la
+          F=$(find . -maxdepth 3 -name settings.gradle.kts -not -path '*/node_modules/*' | head -n1)
+          if [ -z "$F" ]; then
+            echo "::error::settings.gradle.kts tidak ditemukan. File proyek belum ter-upload ke repo (cek folder app/, build.gradle.kts, settings.gradle.kts)."
+            exit 1
+          fi
+          D=$(dirname "$F")
+          echo "Proyek ditemukan di: $D"
+          echo "dir=$D" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -51,6 +65,7 @@ jobs:
 
       - name: Build APK
         id: build
+        working-directory: ${{ steps.proj.outputs.dir }}
         run: |
           if [ "${{ steps.ks.outputs.signed }}" = "true" ] && [ "${{ inputs.build_type }}" != "debug" ]; then
             gradle assembleRelease --no-daemon --stacktrace
@@ -61,12 +76,13 @@ jobs:
           fi
 
       - name: Beri nama APK
+        working-directory: ${{ steps.proj.outputs.dir }}
         run: |
           VN=$(grep -m1 versionName app/build.gradle.kts | sed 's/[^"]*"\([^"]*\)".*/\1/')
           V=${{ steps.build.outputs.variant }}
-          mkdir -p out
-          cp app/build/outputs/apk/$V/*.apk "out/Sonora-$VN-$V.apk"
-          ls -l out
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp app/build/outputs/apk/$V/*.apk "$GITHUB_WORKSPACE/out/Sonora-$VN-$V.apk"
+          ls -l "$GITHUB_WORKSPACE/out"
 
       - uses: actions/upload-artifact@v4
         with:
