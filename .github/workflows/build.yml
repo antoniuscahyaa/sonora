@@ -26,6 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Extract Sonora.zip
+        run: |
+          if [ -f Sonora.zip ]; then
+            unzip -o Sonora.zip -x '.github/*' -d .
+          else
+            echo "Sonora.zip tidak ada, lanjut memakai file yang ada di repo."
+          fi
+
       - name: Cari folder proyek Gradle
         id: proj
         run: |
